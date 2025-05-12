@@ -1,7 +1,7 @@
 import streamlit as st
 import io
 
-def render(df_cross, create_qr_code, add_vertical_space):
+def render(create_qr_code, add_vertical_space):
     st.header("Bem-vindo a uma análise estatística dos fatores que influenciam a Expectativa de Vida")
 
     col1, col2 = st.columns([3, 1])
@@ -10,7 +10,7 @@ def render(df_cross, create_qr_code, add_vertical_space):
         video_file = open('media/expectativa-de-vida.mp4', 'rb')
         st.video(video_file.read())
         st.markdown("""
-        <div style="font-size: 0.8em; color: gray; text-align: center; margin-top: 5px;">
+        <div style="font-size: 1.0em; color: gray; text-align: center; margin-top: 5px;">
         Fonte: <a href="https://youtu.be/wFuVJUf_cao" >AFP Português</a>
         </div>
         """, unsafe_allow_html=True)

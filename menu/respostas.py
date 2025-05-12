@@ -4,12 +4,16 @@ import numpy as np
 import seaborn as sns
 import matplotlib.pyplot as plt
 from sklearn.impute import KNNImputer
+import requests
+from utils.helpers import add_population_density_column
+
 
 def render():
     st.markdown("## 💡 Respostas/Insights")
     st.markdown("Selecione uma pergunta abaixo para visualizar a resposta com análise estatística:")
 
-    perguntas = {
+ 
+    perguntas_map = {
         "Pergunta 1: Os vários fatores preditivos inicialmente escolhidos realmente afetam a expectativa de vida?": 1,
         "Pergunta 2: Quais são as variáveis preditivas que realmente afetam a expectativa de vida?": 2,
         "Pergunta 3: Um país com expectativa de vida < 65 anos deve aumentar os gastos com saúde para melhorar?": 3,
@@ -21,27 +25,85 @@ def render():
         "📊 Resumo geral": 9
     }
 
-    selected_question = st.selectbox("🔽 Selecione a pergunta:", list(perguntas.keys()))
+    opcoes_selectbox = list(perguntas_map.keys())
+    default_selectbox_index = 0
+
+    # Verificar si venimos de la página de preguntas con una pregunta específica
+    if "selected_question_index" in st.session_state:
+        idx_from_perguntas = st.session_state.pop("selected_question_index")
+        
+        # Este if está indentado un nivel dentro del if anterior
+        if 0 <= idx_from_perguntas < len(opcoes_selectbox):
+             default_selectbox_index = idx_from_perguntas
+        # else: # Opcional
+             # st.warning("Índice de pergunta inválido recebido.")
+        
+    # Asumiendo que 'def render():' está en la columna 0:
+    selected_question_text = st.selectbox( # Esta línea debería tener 4 espacios al inicio
+        "🔽 Selecione a pergunta:",
+        opcoes_selectbox,
+        index=default_selectbox_index,
+        key="selectbox_respostas_insights"
+    )
+
+    # --- A partir de aquí, tu lógica para cargar datos y mostrar respuestas ---
+    selected_question_number = perguntas_map.get(selected_question_text)
+
+
 
     # Carregamento local e limpeza dos dados
     df = pd.read_csv("dados/Life Expectancy Data.csv")
     df.columns = df.columns.str.strip()
 
-    imputer = KNNImputer()
-    for col in df.select_dtypes(include="number").columns:
-        df[col] = imputer.fit_transform(df[[col]])
 
-    
-    def wisker_bounds(col):
-        q1, q3 = np.percentile(col, [25, 75])
-        iqr = q3 - q1
-        return q1 - 1.5 * iqr, q3 + 1.5 * iqr
 
-    numerical_cols = df.select_dtypes(include="number").columns
-    outlier_percent = {
-        col: round(100 * ((df[col] < wisker_bounds(df[col])[0]) | (df[col] > wisker_bounds(df[col])[1])).sum() / len(df), 2)
-        for col in numerical_cols
-    }
+
+    # # Leitura e pré-processamento da densidade populacional
+    # df_dens = pd.read_csv("dados/densidade_populacao.csv", skiprows=4)
+
+    # # Mantém apenas colunas relevantes (de 2000 a 2015)
+    # colunas_desejadas = ['Country Name'] + [str(ano) for ano in range(2000, 2016)]
+    # df_dens_filtrado = df_dens[colunas_desejadas].copy()
+
+    # # Transforma o DataFrame em formato longo (long format)
+    # df_dens_long = df_dens_filtrado.melt(id_vars="Country Name", 
+    #                                     var_name="Year", 
+    #                                     value_name="Population density")
+
+    # # Converte o ano para inteiro
+    # df_dens_long["Year"] = df_dens_long["Year"].astype(int)
+
+
+
+    # with open("codigos_paises.json", "r", encoding="utf-8") as f:
+    #     country_name_to_code = json.load(f)
+
+
+
+    # Adiciona densidade populacional
+    df = add_population_density_column(df)
+
+
+
+
+
+
+
+
+
+    # # Mostra as primeiras linhas para verificação
+    # print(df.head(10))
+
+
+
+
+
+
+
+
+
+
+
 
     treated_cols = [
         'Year', 'Adult Mortality', 'infant deaths', 'Alcohol', 'percentage expenditure',
@@ -49,13 +111,9 @@ def render():
         'Diphtheria', 'HIV/AIDS', 'GDP', 'Population', 'thinness  1-19 years',
         'thinness 5-9 years', 'Income composition of resources', 'Schooling'
     ]
-    for col in treated_cols:
-        lw, uw = wisker_bounds(df[col])
-        df[col] = np.clip(df[col], lw, uw)
-
-
-
-
+    # for col in treated_cols:
+    #     lw, uw = wisker_bounds(df[col])
+    #     df[col] = np.clip(df[col], lw, uw)
 
 
     # Cálculo da matriz de correlação
@@ -76,7 +134,20 @@ def render():
         linewidths=0.5
     )
 
-    if perguntas[selected_question] == 1:
+
+
+
+
+
+    # print(df.describe().transpose())
+    # print(df[df["Population"].isnull()][["Country", "Year", "Status", "Life expectancy"]])
+
+
+
+
+
+
+    if selected_question_number == 1:
 
         st.markdown("## ✅ Resposta com base nas correlações")
 
@@ -137,7 +208,7 @@ def render():
         plt.title("Matriz de correlação")
         st.pyplot(plt)
 
-    elif perguntas[selected_question] == 2:
+    elif selected_question_number == 2:
 
         st.markdown("## ✅ Resposta")
 
@@ -212,7 +283,7 @@ def render():
         plt.title("Matriz de correlação")
         st.pyplot(plt)
 
-    elif perguntas[selected_question] == 3:
+    elif selected_question_number == 3:
         
         st.markdown("## ✅ Resposta")
 
@@ -249,7 +320,7 @@ def render():
         ax.set_ylabel("Life expectancy")
         st.pyplot(fig)
 
-    elif perguntas[selected_question] == 4:
+    elif selected_question_number == 4:
 
         st.markdown("## ✅ Resposta")
 
@@ -300,7 +371,7 @@ def render():
         st.markdown(f"**Correlação Infant Mortality vs Life expectancy**: `{corr_infant:.4f}`")
         st.markdown(f"**Correlação Adult Mortality vs Life expectancy**: `{corr_adult:.4f}`")
 
-    elif perguntas[selected_question] == 5:
+    elif selected_question_number == 5:
 
         st.markdown("## ✅ Resposta")
 
@@ -342,7 +413,7 @@ def render():
         A escolaridade tem um impacto **positivo e significativo** na expectativa de vida. Políticas públicas que **ampliem o acesso à educação de qualidade** podem contribuir diretamente para o **aumento da longevidade** e melhoria da qualidade de vida da população.
         """)
 
-    elif perguntas[selected_question] == 6:
+    elif selected_question_number == 6:
 
         st.markdown("## ✅ Resposta")
         st.markdown("""
@@ -381,42 +452,66 @@ def render():
         """)
 
 
-    elif perguntas[selected_question] == 7:
+    elif selected_question_number == 7:
 
+        selected_metric = "Population density"
+
+        # Calcular a correlação diretamente com a coluna já existente
+        correlation = df['Population density'].corr(df['Life expectancy'])
+
+        # Mostrar a resposta
         st.markdown("## ✅ Resposta")
-        st.markdown("""
-        Com base na correlação fornecida, a relação entre a **população** (Population) e a **expectativa de vida** (Life expectancy) é muito fraca, com um valor de correlação de **0.0102**, praticamente próximo de zero. Isso indica que **não há uma correlação significativa entre a densidade populacional e a expectativa de vida**.
+        st.markdown(f"""
+        Com base na correlação fornecida, a relação entre a **{selected_metric}** e a **expectativa de vida** (Life expectancy) é fraca, com um valor de correlação de **{correlation:.4f}**. Isso indica que **não há uma correlação significativa entre a {selected_metric.lower()} e a expectativa de vida**.
         """)
 
         st.markdown("---")
         st.markdown("### 🔍 Interpretação")
-        st.markdown("""
-        - **Correlação muito baixa (0.0102)**: A correlação extremamente baixa sugere que a densidade populacional **não tem um impacto significativo** na expectativa de vida. Ou seja, um país com uma alta densidade populacional não tende, necessariamente, a ter uma expectativa de vida menor.
+        st.markdown(f"""
+        - **Correlação baixa ({correlation:.4f})**: A correlação baixa sugere que a {selected_metric.lower()} **não tem um impacto significativo** na expectativa de vida. Ou seja, um país com uma alta {selected_metric.lower()} não tende, necessariamente, a ter uma expectativa de vida menor.
         - **Fatores mais importantes**: Outros fatores, como **acesso a cuidados de saúde, qualidade de vida, educação, economia e políticas públicas**, provavelmente têm um efeito mais substancial na expectativa de vida.
         """)
 
         st.markdown("### 📈 Correlação")
-        correlation_population = df['Population'].corr(df['Life expectancy'])
-        st.write(f"Correlação entre População e Expectativa de Vida: **{correlation_population:.4f}**")
+        st.write(f"Correlação entre {selected_metric} e Expectativa de Vida: **{correlation:.4f}**")
 
+        # Visualização
         st.markdown("### 📊 Visualização")
 
+
+        # fig, ax = plt.subplots(figsize=(8, 6))
+        # sns.scatterplot(data=df, x='Population density', y='Life expectancy', hue='Status', alpha=0.7, ax=ax)
+        # ax.set_title("Population Density vs Expectativa de Vida", fontsize=14)
+        # ax.set_xlabel("Population Density")
+        # ax.set_ylabel("Expectativa de Vida (anos)")
+        # ax.legend(title="Status do País")
+        # st.pyplot(fig)
+
         fig, ax = plt.subplots(figsize=(8, 6))
-        sns.scatterplot(data=df, x='Population', y='Life expectancy', hue='Status', alpha=0.7, ax=ax)
-        ax.set_title("População vs Expectativa de Vida", fontsize=14)
-        ax.set_xlabel("População")
+        sns.scatterplot(data=df, x='Population density', y='Life expectancy', hue='Status', alpha=0.7, ax=ax)
+
+        # Ajustes recomendados
+        ax.set_xscale("log")
+        ax.set_title("Population Density vs Expectativa de Vida", fontsize=14)
+        ax.set_xlabel("Population Density (pessoas/km²)")
         ax.set_ylabel("Expectativa de Vida (anos)")
         ax.legend(title="Status do País")
+
         st.pyplot(fig)
 
-        st.markdown("---")
-        st.markdown("### 📌 Conclusão")
-        st.markdown("""
-        **A densidade populacional** por si só **não é um fator determinante** na expectativa de vida dos países. A análise de outras variáveis, como os cuidados com a saúde, educação, e condições econômicas, é fundamental para entender as variações na expectativa de vida.
-        """)
 
 
-    elif perguntas[selected_question] == 8:
+
+
+
+
+
+
+
+
+
+
+    elif selected_question_number == 8:
 
         st.markdown("## ✅ Resposta")
         st.markdown("""
@@ -470,34 +565,86 @@ def render():
 
 
 
-    elif perguntas[selected_question] == 9:
+    # elif selected_question_number == 9:
 
-        # Dicionário com fatores e correlações discutidas
+    #     # Dicionário com fatores e correlações discutidas
+    #     correlacoes_resumo = {
+    #         "Escolaridade": 0.738,
+    #         "Composição de renda": 0.729,
+    #         "Vacinação (Difteria)": 0.573,
+    #         "Vacinação (Polio)": 0.567,
+    #         "BMI": 0.559,
+    #         "PIB per capita": 0.498,
+    #         "Hepatite B": 0.297,
+    #         "Álcool": 0.390,
+
+    #         "HIV/AIDS": -0.796,
+    #         "Mortalidade adulta": -0.691,
+    #         "Menores de 5 anos": -0.603,
+    #         "Mortalidade infantil": -0.566,
+    #         "Desnutrição (1-19)": -0.512,
+    #         "Desnutrição (5-9)": -0.509,
+    #         "Sarampo": -0.336,
+    #         "População": 0.010
+    #     }
+
+    #     # Criar DataFrame para visualização
+    #     df_corr_resumo = pd.DataFrame.from_dict(correlacoes_resumo, orient='index', columns=["Correlação"])
+    #     df_corr_resumo = df_corr_resumo.sort_values("Correlação")
+
+    #     # Plot
+    #     plt.figure(figsize=(10, 8))
+    #     sns.barplot(x="Correlação", y=df_corr_resumo.index, data=df_corr_resumo, palette="vlag")
+    #     plt.title("Resumo das correlações com a Expectativa de Vida", fontsize=14)
+    #     plt.axvline(0, color="black", linewidth=0.8, linestyle="--")
+    #     plt.ylabel("Variáveis analisadas")
+    #     plt.tight_layout()
+    #     st.pyplot(plt)
+
+
+
+    #     # Encontrar o país com maior e menor expectativa de vida
+    #     max_life_expectancy_country = df.loc[df['Life expectancy'].idxmax(), 'Country']
+    #     min_life_expectancy_country = df.loc[df['Life expectancy'].idxmin(), 'Country']
+
+    #     # Mostrar no Streamlit
+    #     st.markdown("### 🌍 Países com maior e menor expectativa de vida")
+    #     st.write(f"O país com **maior expectativa de vida** é: **{max_life_expectancy_country}**")
+    #     st.write(f"O país com **menor expectativa de vida** é: **{min_life_expectancy_country}**")
+
+
+
+
+
+    elif selected_question_number == 9:
+       
+        # Filtrar solo 2015
+        df_2015 = df[df["Year"] == 2015].copy()
+
+        # Lista de variáveis para correlação
+        variaveis = [
+            "Schooling", "Income composition of resources", "Diphtheria", "Polio",
+            "BMI", "GDP", "Hepatitis B", "Alcohol",
+            "HIV/AIDS", "Adult Mortality", "under-five deaths", "infant deaths",
+            "thinness  1-19 years", "thinness 5-9 years", "Measles", "Population"
+        ]
+
+        
+        # Cálculo das correlações com Life expectancy
+        # correlacoes_resumo = {
+        #     nome: df_2015[nome].corr(df_2015["Life expectancy"])
+        #     for nome in variaveis
+        # }
         correlacoes_resumo = {
-            "Escolaridade": 0.738,
-            "Composição de renda": 0.729,
-            "Vacinação (Difteria)": 0.573,
-            "Vacinação (Polio)": 0.567,
-            "BMI": 0.559,
-            "PIB per capita": 0.498,
-            "Hepatite B": 0.297,
-            "Álcool": 0.390,
-
-            "HIV/AIDS": -0.796,
-            "Mortalidade adulta": -0.691,
-            "Menores de 5 anos": -0.603,
-            "Mortalidade infantil": -0.566,
-            "Desnutrição (1-19)": -0.512,
-            "Desnutrição (5-9)": -0.509,
-            "Sarampo": -0.336,
-            "População": 0.010
+            nome: df[nome].corr(df["Life expectancy"])
+            for nome in variaveis
         }
 
-        # Criar DataFrame para visualização
+        # Organizar DataFrame
         df_corr_resumo = pd.DataFrame.from_dict(correlacoes_resumo, orient='index', columns=["Correlação"])
         df_corr_resumo = df_corr_resumo.sort_values("Correlação")
 
-        # Plot
+        # Gráfico de barras
         plt.figure(figsize=(10, 8))
         sns.barplot(x="Correlação", y=df_corr_resumo.index, data=df_corr_resumo, palette="vlag")
         plt.title("Resumo das correlações com a Expectativa de Vida", fontsize=14)
@@ -506,5 +653,24 @@ def render():
         plt.tight_layout()
         st.pyplot(plt)
 
+        # Países com maior e menor expectativa de vida em 2015
+        idx_max = df_2015["Life expectancy"].idxmax()
+        idx_min = df_2015["Life expectancy"].idxmin()
+        pais_max = df_2015.loc[idx_max, "Country"]
+        pais_min = df_2015.loc[idx_min, "Country"]
+        vida_max = df_2015.loc[idx_max, "Life expectancy"]
+        vida_min = df_2015.loc[idx_min, "Life expectancy"]
 
-    
+        # Expectativa de vida no Brasil em 2015
+        vida_brasil = df_2015[df_2015["Country"] == "Brazil"]["Life expectancy"].values[0]
+
+        # Texto no painel
+        st.markdown("### 🌍 Expectativa de vida em 2015")
+        st.write(f"O país com **maior expectativa de vida** em 2015 foi **{pais_max}**, com **{vida_max:.1f} anos**.")
+        st.write(f"O país com **menor expectativa de vida** em 2015 foi **{pais_min}**, com **{vida_min:.1f} anos**.")
+        st.write(f"No **Brasil**, a expectativa de vida em 2015 foi de **{vida_brasil:.1f} anos**.")
+
+
+
+
+        
