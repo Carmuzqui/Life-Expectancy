@@ -21,34 +21,49 @@ def render():
 
     st.success("Valores ausentes imputados com sucesso.")
 
-    st.markdown("---")
-    st.markdown("### 📌 Análise de outliers com o método IQR")
+
+
+
+
+
+
+    # st.markdown("---")
+    # st.markdown("### 📌 Análise de outliers com o método IQR")
     
-    def wisker_bounds(col):
-        q1, q3 = np.percentile(col, [25, 75])
-        iqr = q3 - q1
-        return q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    # def wisker_bounds(col):
+    #     q1, q3 = np.percentile(col, [25, 75])
+    #     iqr = q3 - q1
+    #     return q1 - 1.5 * iqr, q3 + 1.5 * iqr
 
     numerical_cols = df.select_dtypes(include="number").columns
-    outlier_percent = {
-        col: round(100 * ((df[col] < wisker_bounds(df[col])[0]) | (df[col] > wisker_bounds(df[col])[1])).sum() / len(df), 2)
-        for col in numerical_cols
-    }
+    # outlier_percent = {
+    #     col: round(100 * ((df[col] < wisker_bounds(df[col])[0]) | (df[col] > wisker_bounds(df[col])[1])).sum() / len(df), 2)
+    #     for col in numerical_cols
+    # }
 
-    st.dataframe(pd.DataFrame.from_dict(outlier_percent, orient='index', columns=['% de Outliers']).sort_values('% de Outliers', ascending=False))
+    # st.dataframe(pd.DataFrame.from_dict(outlier_percent, orient='index', columns=['% de Outliers']).sort_values('% de Outliers', ascending=False))
 
-    st.markdown("### 📌 Tratamento de outliers por IQR")
+    # st.markdown("### 📌 Tratamento de outliers por IQR")
     treated_cols = [
         'Year', 'Adult Mortality', 'infant deaths', 'Alcohol', 'percentage expenditure',
         'Hepatitis B', 'Measles', 'BMI', 'under-five deaths', 'Polio', 'Total expenditure',
         'Diphtheria', 'HIV/AIDS', 'GDP', 'Population', 'thinness  1-19 years',
         'thinness 5-9 years', 'Income composition of resources', 'Schooling'
     ]
-    for col in treated_cols:
-        lw, uw = wisker_bounds(df[col])
-        df[col] = np.clip(df[col], lw, uw)
+    # for col in treated_cols:
+    #     lw, uw = wisker_bounds(df[col])
+    #     df[col] = np.clip(df[col], lw, uw)
 
-    st.success("Outliers tratados com substituição pelos limites IQR.")
+    # st.success("Outliers tratados com substituição pelos limites IQR.")
+
+
+
+
+
+
+
+
+
 
     st.markdown("### 📌 Boxplots Após Tratamento")
     fig1, axes = plt.subplots(5, 4, figsize=(20, 15))
